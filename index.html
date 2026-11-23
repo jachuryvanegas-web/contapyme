@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Facturador DIAN + Siigo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#263347;--border:#334155;
+  --text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--accent2:#6366f1;
+  --ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--sh:0 2px 8px rgba(0,0,0,.4);
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+/* Layout */
+.sidebar{position:fixed;left:0;top:0;width:220px;height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;padding:0}
+.logo{padding:20px 16px 12px;border-bottom:1px solid var(--border);font-weight:700;font-size:1.05rem;color:#fff}
+.logo span{color:var(--accent)}
+.nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;color:var(--muted);transition:all .15s;font-size:.9rem;border-left:3px solid transparent}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:#fff;border-left-color:var(--accent)}
+.nav-icon{font-size:1.1rem;width:20px;text-align:center}
+.main{margin-left:220px;padding:28px;min-height:100vh}
+.empresa-bar{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;margin-bottom:24px;display:flex;align-items:center;gap:12px;font-size:.85rem}
+.empresa-bar select{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:.85rem}
+
+/* Cards / Panels */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:var(--sh)}
+.card-title{font-size:1rem;font-weight:600;color:#fff;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+
+/* Stats */
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.stat-val{font-size:1.6rem;font-weight:700;color:#fff}
+.stat-sub{font-size:.8rem;color:var(--muted);margin-top:4px}
+.stat.ok   .stat-val{color:var(--ok)}
+.stat.warn .stat-val{color:var(--warn)}
+.stat.err  .stat-val{color:var(--err)}
+.stat.blue .stat-val{color:var(--accent)}
+
+/* Forms */
+.form-group{margin-bottom:14px}
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:5px;font-weight:500}
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:.9rem;transition:border .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:70px;font-family:monospace;font-size:.82rem}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:7px;font-size:.88rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-success{background:var(--ok);color:#fff}
+.btn-success:hover{background:#16a34a}
+.btn-warn{background:var(--warn);color:#000}
+.btn-warn:hover{background:#d97706}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{background:var(--surface2)}
+.btn-sm{padding:5px 12px;font-size:.82rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(59,130,246,.06)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-icon{font-size:2.5rem;margin-bottom:10px;display:block}
+.upload-txt{color:var(--muted);font-size:.88rem}
+.upload-txt strong{color:var(--accent)}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-ok{background:rgba(34,197,94,.15);color:var(--ok)}
+.badge-warn{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge-err{background:rgba(239,68,68,.15);color:var(--err)}
+.badge-info{background:rgba(59,130,246,.15);color:var(--accent)}
+
+/* Table */
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:var(--surface2);color:var(--muted);font-weight:600;padding:10px 12px;text-align:left;white-space:nowrap}
+td{padding:9px 12px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.025)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Result panel */
+.result-panel{background:var(--surface2);border-radius:8px;padding:16px;font-size:.82rem}
+.result-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
+.result-row:last-child{border-bottom:none;font-weight:700;color:#fff;font-size:.9rem}
+.result-row .label{color:var(--muted)}
+.result-row .val{color:var(--text);font-variant-numeric:tabular-nums}
+.result-row .val.ok{color:var(--ok)}
+.result-row .val.warn{color:var(--warn)}
+.result-row .val.err{color:var(--err)}
+
+/* Alert */
+.alert{padding:12px 16px;border-radius:8px;font-size:.85rem;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px}
+.alert-ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:var(--ok)}
+.alert-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--err)}
+.alert-warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--warn)}
+.alert-info{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--accent)}
+
+/* Misc */
+.sep{height:1px;background:var(--border);margin:16px 0}
+.flex{display:flex;align-items:center;gap:10px}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.mt{margin-top:16px}
+.muted{color:var(--muted);font-size:.82rem}
+.hidden{display:none!important}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+pre{background:var(--surface2);padding:12px;border-radius:7px;font-size:.78rem;overflow:auto;max-height:300px;white-space:pre-wrap}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:9px 16px;cursor:pointer;color:var(--muted);font-size:.88rem;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:#fff;border-bottom-color:var(--accent)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Sections */
+.section{display:none}
+.section.active{display:block}
+
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;overflow-x:auto}
+  .nav{display:flex;flex-direction:row;padding:0}
+  .nav-item{padding:12px 14px;border-left:none;border-bottom:3px solid transparent}
+  .nav-item.active{border-left:none;border-bottom-color:var(--accent)}
+  .main{margin-left:0;padding:16px}
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="logo">⚡ <span>Facturador</span> DIAN</div>
+  <div class="nav">
+    <div class="nav-item active" onclick="goTo('dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
+    <div class="nav-item" onclick="goTo('xml')"><span class="nav-icon">📄</span>Verificar XML</div>
+    <div class="nav-item" onclick="goTo('excel')"><span class="nav-icon">📋</span>Causación Excel</div>
+    <div class="nav-item" onclick="goTo('historial')"><span class="nav-icon">🗂️</span>Historial</div>
+    <div class="nav-item" onclick="goTo('cierre')"><span class="nav-icon">📅</span>Cierre Mensual</div>
+    <div class="nav-item" onclick="goTo('config')"><span class="nav-icon">⚙️</span>Configuración</div>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Empresa bar -->
+  <div class="empresa-bar">
+    <span style="color:var(--muted)">Empresa:</span>
+    <select id="selEmpresa" onchange="cambiarEmpresa(this.value)" style="min-width:200px">
+      <option value="">— Seleccionar empresa —</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="goTo('config')">+ Nueva empresa</button>
+    <span id="siigoStatus" class="badge badge-warn" style="margin-left:auto">Siigo: sin config</span>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="sec-dashboard" class="section active">
+    <h1 style="font-size:1.3rem;margin-bottom:20px">📊 Dashboard</h1>
+    <div class="grid4" id="statsGrid">
+      <div class="stat blue"><div class="stat-label">Total facturas</div><div class="stat-val" id="st-total">—</div></div>
+      <div class="stat ok"><div class="stat-label">Causadas en Siigo</div><div class="stat-val" id="st-causadas">—</div></div>
+      <div class="stat warn"><div class="stat-label">Pendientes</div><div class="stat-val" id="st-pend">—</div></div>
+      <div class="stat"><div class="stat-label">Total facturado</div><div class="stat-val" id="st-monto">—</div></div>
+    </div>
+    <div class="grid2 mt">
+      <div class="card">
+        <div class="card-title">💰 Resumen fiscal</div>
+        <div class="result-panel" id="resumenFiscal">
+          <div class="muted" style="text-align:center;padding:20px">Seleccione una empresa</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚡ Acciones rápidas</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-primary" onclick="goTo('xml')">📄 Subir XML DIAN</button>
+          <button class="btn btn-success" onclick="goTo('excel')">📋 Causación masiva Excel</button>
+          <button class="btn btn-ghost" onclick="goTo('historial')">🗂️ Ver historial</button>
+          <button class="btn btn-ghost" onclick="cargarDashboard()">🔄 Actualizar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERIFICAR XML -->
+  <div id="sec-xml" class="section">
+    <h1 style="font-size:1.3rem;margin-bottom:20px">📄 Verificar y causar XML DIAN</h1>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'tab-verificar')">🔍 Solo verificar</div>
+      <div class="tab" onclick="switchTab(this,'tab-causar-xml')">⚡ Verificar y causar</div>
+    </div>
+
+    <!-- Tab: solo verificar -->
+    <div id="tab-verificar" class="tab-content active">
+      <div class="card">
+        <div class="card-title">🔍 Verificar XML — extrae todos los valores fiscales</div>
+        <div class="upload-zone" id="dropZoneV">
+          <input type="file" accept=".xml" id="fileXmlV" onchange="verificarXML(this.files[0])">
+          <span class="upload-icon">📄</span>
+          <div class="upload-txt">Arrastra el XML aquí o <strong>haz clic para seleccionar</strong></div>
+          <div class="muted mt">Facturas electrónicas DIAN — UBL 2.1</div>
+        </div>
+      </div>
+      <div id="resultadoVerificacion" class="hidden"></div>
+    </div>
+
+    <!-- Tab: causar en Siigo -->
+    <div id="tab-causar-xml" class="tab-content">
+      <div class="card">
+        <div class="card-title">⚡ Verificar y causar en Siigo</div>
+        <div id="alertCausarXml"></div>
+        <div class="upload-zone" id="dropZoneC">
+          <input type="file" accept=".xml" id="fileXmlC" onchange="causarXML(this.files[0])">
+          <span class="upload-icon">📄</span>
+          <div class="upload-txt">Arrastra el XML para <strong>causar automáticamente</strong> en Siigo</div>
+          <div class="muted mt">Requiere configuración Siigo activa</div>
+        </div>
+      </div>
+      <div id="resultadoCausion" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- CAUSACIÓN EXCEL -->
+  <div id="sec-excel" class="section">
+    <h1 style="font-size:1.3rem;margin-bottom:20px">📋 Causación masiva desde Excel</h1>
+
+    <div class="card">
+      <div class="card-title">📋 Cargar archivo Excel</div>
+      <div class="muted" style="margin-bottom:12px">Columnas reconocidas: NIT, Nombre, Número, Fecha, Subtotal, IVA 19%, IVA 5%, Total, ReteFuente, ReteIVA, ReteICA, Concepto</div>
+      <div class="upload-zone" id="dropZoneE">
+        <input type="file" accept=".xlsx,.xls" id="fileExcel" onchange="cargarExcel(this.files[0])">
+        <span class="upload-icon">📋</span>
+        <div class="upload-txt">Arrastra el Excel aquí o <strong>haz clic para seleccionar</strong></div>
+        <div class="muted mt">Formatos: .xlsx, .xls</div>
+      </div>
+    </div>
+
+    <div id="resultadoExcel" class="hidden">
+      <div class="card">
+        <div class="flex-between" style="margin-bottom:16px">
+          <div class="card-title" style="margin:0">📊 Facturas detectadas</div>
+          <div class="flex">
+            <span id="excelResumenBadge"></span>
+            <button class="btn btn-success" id="btnCausarExcel" onclick="confirmarCausarExcel()" disabled>
+              ⚡ Causar en Siigo
+            </button>
+          </div>
+        </div>
+        <div id="tablaExcel"></div>
+      </div>
+      <div id="resultadoCausionExcel" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- CIERRE CONTABLE MENSUAL -->
+  <div id="sec-cierre" class="section">
+    <h1 style="font-size:1.3rem;margin-bottom:6px">📅 Cierre Contable Mensual</h1>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px">
+      Genera estados financieros con notas NIIF • Concilia bancos • Causaciones automáticas de provisiones
+    </p>
+
+    <!-- Paso 1: Configurar período -->
+    <div class="card" id="cierreStep1">
+      <div class="card-title">① Seleccionar período y extraer de Siigo</div>
+      <div class="grid2">
+        <div class="form-group">
+          <label>Período (mes a cerrar)</label>
+          <input type="month" id="cierrePeriodo" style="max-width:200px">
+        </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:14px">
+          <button class="btn btn-primary" onclick="cierreIniciar()">🔄 Extraer datos de Siigo</button>
+        </div>
+      </div>
+      <div id="cierreInfoSiigo" class="hidden">
+        <div class="grid4" style="margin-top:16px">
+          <div class="stat blue"><div class="stat-label">Cuentas extraídas</div><div class="stat-val" id="ci-cuentas">—</div></div>
+          <div class="stat ok"><div class="stat-label">Comprobantes</div><div class="stat-val" id="ci-comprobantes">—</div></div>
+          <div class="stat"><div class="stat-label">Facturas venta</div><div class="stat-val" id="ci-fv">—</div></div>
+          <div class="stat warn"><div class="stat-label">Estado</div><div class="stat-val" style="font-size:1rem" id="ci-estado">—</div></div>
+        </div>
+        <!-- Alertas de Siigo -->
+        <div id="cierreAlertas" class="hidden" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- Paso 2: Archivos manuales -->
+    <div class="card hidden" id="cierreStep2">
+      <div class="card-title">② Subir archivos manuales</div>
+      <p style="color:var(--muted);font-size:.82rem;margin-bottom:16px">
+        Los siguientes archivos no se pueden descargar automáticamente de Siigo y deben ser subidos en Excel:
+      </p>
+      <div id="cierreManualList"></div>
+
+      <!-- Extracto bancario -->
+      <div class="grid2 mt" style="margin-top:16px">
+        <div>
+          <div class="card-title" style="font-size:.9rem">🏦 Extracto bancario <span style="color:var(--err);font-size:.8rem">*requerido</span></div>
+          <div class="form-group">
+            <label>Cuenta contable del banco</label>
+            <select id="cierreCuentaBanco" style="max-width:220px">
+              <option value="1110">1110 — Bancos cuenta corriente</option>
+              <option value="1115">1115 — Bancos cuenta de ahorros</option>
+              <option value="1120">1120 — Cuentas de ahorro</option>
+            </select>
+          </div>
+          <div class="drop-zone" id="dropBanco" onclick="document.getElementById('fileBanco').click()">
+            <div>🏦 Arrastra el extracto bancario aquí<br><span style="font-size:.8rem;color:var(--muted)">Excel del banco (Bancolombia, Davivienda, Bogotá…)</span></div>
+          </div>
+          <input type="file" id="fileBanco" accept=".xlsx,.xls,.csv" style="display:none" onchange="cierreSubirBanco(this)">
+          <div id="bancoPrev" class="hidden" style="margin-top:8px"></div>
+        </div>
+        <div>
+          <div class="card-title" style="font-size:.9rem">📜 Certificados de retención <span style="color:var(--muted);font-size:.8rem">opcional</span></div>
+          <div class="drop-zone" id="dropRet" onclick="document.getElementById('fileRet').click()">
+            <div>📜 Certificados de ReteFuente recibidos<br><span style="font-size:.8rem;color:var(--muted)">Los que tus clientes te practicaron (si no están en XML)</span></div>
+          </div>
+          <input type="file" id="fileRet" accept=".xlsx,.xls" style="display:none" onchange="cierreSubirRetenciones(this)">
+          <div id="retPrev" class="hidden" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 3: Generar -->
+    <div class="card hidden" id="cierreStep3">
+      <div class="card-title">③ Generar estados financieros y causaciones</div>
+      <div class="flex" style="gap:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="cierreGenerar()">📊 Generar cierre completo</button>
+        <span style="color:var(--muted);font-size:.82rem;align-self:center">
+          Provisiones, depreciación, ajuste IVA, conciliación bancaria y estados financieros NIIF
+        </span>
+      </div>
+      <div id="cierreProgress" class="hidden" style="margin-top:16px">
+        <div style="color:var(--muted);font-size:.85rem">⏳ Generando cierre…</div>
+      </div>
+    </div>
+
+    <!-- Resultado: Estados Financieros -->
+    <div id="cierreResultados" class="hidden">
+
+      <!-- Tabs de resultados -->
+      <div class="tabs" style="margin-bottom:0">
+        <div class="tab active" onclick="switchTab(this,'cr-esf')">🏛️ Balance General</div>
+        <div class="tab" onclick="switchTab(this,'cr-eri')">📈 Estado de Resultados</div>
+        <div class="tab" onclick="switchTab(this,'cr-ret')">🔖 Retenciones</div>
+        <div class="tab" onclick="switchTab(this,'cr-prov')">⚙️ Causaciones</div>
+        <div class="tab" onclick="switchTab(this,'cr-niif')">📋 Notas NIIF</div>
+        <div class="tab" onclick="switchTab(this,'cr-check')">✅ Checklist</div>
+      </div>
+
+      <!-- Balance General (ESF) -->
+      <div id="cr-esf" class="tab-content active">
+        <div class="card">
+          <div class="flex-between" style="margin-bottom:16px">
+            <div class="card-title" style="margin:0">🏛️ Estado de Situación Financiera</div>
+            <div id="esf-fecha" style="color:var(--muted);font-size:.82rem"></div>
+          </div>
+          <div class="grid2">
+            <div>
+              <div style="font-weight:600;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:12px">ACTIVOS</div>
+              <div id="esf-activos"></div>
+              <div style="font-weight:700;border-top:2px solid var(--border);padding-top:8px;margin-top:8px;display:flex;justify-content:space-between">
+                <span>TOTAL ACTIVOS</span><span id="esf-total-activos" style="color:var(--accent)"></span>
+              </div>
+            </div>
+            <div>
+              <div style="font-weight:600;color:var(--err);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:12px">PASIVOS</div>
+              <div id="esf-pasivos"></div>
+              <div style="font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:8px;display:flex;justify-content:space-between">
+                <span>TOTAL PASIVOS</span><span id="esf-total-pasivos" style="color:var(--err)"></span>
+              </div>
+              <div style="font-weight:600;color:var(--ok);border-bottom:1px solid var(--border);padding:12px 0 8px;margin-top:12px">PATRIMONIO</div>
+              <div id="esf-patrimonio"></div>
+              <div style="font-weight:700;border-top:2px solid var(--border);padding-top:8px;margin-top:8px;display:flex;justify-content:space-between">
+                <span>TOTAL PAT+PAS</span><span id="esf-total-paspat" style="color:var(--ok)"></span>
+              </div>
+            </div>
+          </div>
+          <div id="esf-ecuacion" style="margin-top:16px;padding:12px;border-radius:8px;text-align:center;font-size:.9rem"></div>
+        </div>
+      </div>
+
+      <!-- Estado de Resultados -->
+      <div id="cr-eri" class="tab-content">
+        <div class="card">
+          <div class="card-title">📈 Estado de Resultados Integral</div>
+          <div class="grid2">
+            <div id="eri-izq"></div>
+            <div id="eri-der"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Retenciones -->
+      <div id="cr-ret" class="tab-content">
+        <div class="card">
+          <div class="card-title">🔖 Resumen de Retenciones</div>
+          <div id="cr-ret-tabla"></div>
+        </div>
+      </div>
+
+      <!-- Causaciones automáticas -->
+      <div id="cr-prov" class="tab-content">
+        <div class="card">
+          <div class="flex-between" style="margin-bottom:16px">
+            <div class="card-title" style="margin:0">⚙️ Causaciones del Cierre</div>
+            <button class="btn btn-primary btn-sm" onclick="cierreCausar()">🚀 Causar en Siigo</button>
+          </div>
+          <div id="cr-prov-lista"></div>
+        </div>
+      </div>
+
+      <!-- Notas NIIF -->
+      <div id="cr-niif" class="tab-content">
+        <div class="card">
+          <div class="card-title">📋 Notas a los Estados Financieros (NIIF para PYMES)</div>
+          <div id="cr-niif-notas"></div>
+        </div>
+      </div>
+
+      <!-- Checklist -->
+      <div id="cr-check" class="tab-content">
+        <div class="card">
+          <div class="card-title">✅ Checklist de Cierre</div>
+          <div id="cr-check-lista"></div>
+        </div>
+      </div>
+
+    </div><!-- /cierreResultados -->
+
+    <!-- Lista de cierres anteriores -->
+    <div class="card" style="margin-top:20px">
+      <div class="flex-between" style="margin-bottom:12px">
+        <div class="card-title" style="margin:0">📂 Cierres anteriores</div>
+        <button class="btn btn-ghost btn-sm" onclick="cargarCierres()">🔄</button>
+      </div>
+      <div id="tablaCierres"><div class="muted" style="text-align:center;padding:20px">Sin cierres registrados</div></div>
+    </div>
+
+  </div><!-- /sec-cierre -->
+
+  <!-- HISTORIAL -->
+  <div id="sec-historial" class="section">
+    <h1 style="font-size:1.3rem;margin-bottom:20px">🗂️ Historial de facturas</h1>
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:16px">
+        <div class="flex" style="gap:8px">
+          <select id="filtEstado" onchange="cargarHistorial()" style="width:150px">
+            <option value="">Todos los estados</option>
+            <option value="CAUSADA">Causadas</option>
+            <option value="PENDIENTE">Pendientes</option>
+          </select>
+          <select id="filtOrigen" onchange="cargarHistorial()" style="width:120px">
+            <option value="">Todo origen</option>
+            <option value="XML">XML</option>
+            <option value="EXCEL">Excel</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="cargarHistorial()">🔄 Actualizar</button>
+      </div>
+      <div id="tablaHistorial"><div class="muted" style="text-align:center;padding:30px">Seleccione una empresa para ver el historial</div></div>
+    </div>
+  </div>
+
+  <!-- CONFIGURACIÓN -->
+  <div id="sec-config" class="section">
+    <h1 style="font-size:1.3rem;margin-bottom:20px">⚙️ Configuración</h1>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'tab-empresas')">🏢 Empresas</div>
+      <div class="tab" onclick="switchTab(this,'tab-siigo')">🔗 Siigo API</div>
+    </div>
+
+    <!-- Empresas -->
+    <div id="tab-empresas" class="tab-content active">
+      <div class="card">
+        <div class="card-title">🏢 Nueva empresa</div>
+        <div class="grid2">
+          <div class="form-group"><label>Razón social</label><input id="cfgNombre" placeholder="Empresa S.A.S."></div>
+          <div class="form-group"><label>NIT (sin dígito verificador)</label><input id="cfgNit" placeholder="900123456"></div>
+        </div>
+        <button class="btn btn-primary" onclick="crearEmpresa()">+ Crear empresa</button>
+        <div id="alertEmpresa" class="mt"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Lista de empresas</div>
+        <div id="listaEmpresas"><div class="muted">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- Siigo -->
+    <div id="tab-siigo" class="tab-content">
+      <div class="card">
+        <div class="card-title">🔗 Configurar Siigo API</div>
+        <div class="alert alert-info">ℹ️ Obtén las credenciales en Siigo → Configuración → Integraciones → API. El <strong>access_key</strong> es la llave secreta generada allí.</div>
+        <div id="alertSiigo" class="mt"></div>
+        <div class="form-group"><label>Username (email de Siigo)</label><input id="siigoUser" placeholder="usuario@empresa.com"></div>
+        <div class="form-group"><label>Access Key (token de API)</label><input id="siigoKey" type="password" placeholder="••••••••••••••••"></div>
+        <div class="form-group"><label>Partner ID (opcional — para integradores Siigo)</label><input id="siigoPartner" placeholder="Dejar vacío si no aplica"></div>
+        <div class="grid2">
+          <div class="form-group"><label>ID tipo documento compra en Siigo</label><input id="siigoTipoDoc" value="24" type="number"></div>
+          <div class="form-group"><label>Cuenta gasto por defecto (PUC)</label><input id="siigoCuenta" value="513595"></div>
+        </div>
+        <div class="flex">
+          <button class="btn btn-ghost" onclick="probarSiigo()">🔍 Probar conexión</button>
+          <button class="btn btn-primary" onclick="guardarSiigo()">💾 Guardar config</button>
+        </div>
+        <div id="siigoPruebaResult" class="mt"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Estado global ──────────────────────────────────────────────────────────
+const API = '';  // mismo origen
+let _empresa = null;
+let _excelFacturas = [];
+
+// ── Navegación ──────────────────────────────────────────────────────────────
+function goTo(sec) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + sec).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes("'" + sec + "'")) n.classList.add('active');
+  });
+  if (sec === 'historial') cargarHistorial();
+  if (sec === 'dashboard') cargarDashboard();
+  if (sec === 'config') { cargarEmpresas(); }
+  if (sec === 'cierre') cargarCierres();
+}
+
+function switchTab(el, id) {
+  const container = el.closest('.section') || el.parentElement.parentElement;
+  container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  container.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  container.querySelector('#' + id).classList.add('active');
+}
+
+// ── Empresa ──────────────────────────────────────────────────────────────────
+async function cargarEmpresas() {
+  const r = await apiFetch('/api/empresas');
+  const sel = document.getElementById('selEmpresa');
+  const lista = document.getElementById('listaEmpresas');
+  if (!r.ok) return;
+
+  sel.innerHTML = '<option value="">— Seleccionar empresa —</option>';
+  r.empresas.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.id; opt.textContent = `${e.nombre} (${e.nit})`;
+    if (_empresa?.id == e.id) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  if (lista) {
+    if (!r.empresas.length) {
+      lista.innerHTML = '<div class="muted" style="padding:16px;text-align:center">No hay empresas. Crea una arriba.</div>';
+    } else {
+      lista.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Razón social</th><th>NIT</th><th>Creado</th></tr></thead>
+        <tbody>${r.empresas.map(e => `<tr>
+          <td>${e.id}</td><td><strong>${e.nombre}</strong></td><td>${e.nit}</td>
+          <td class="muted">${e.creado?.split('T')[0]||''}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    }
+  }
+}
+
+function cambiarEmpresa(val) {
+  _empresa = val ? { id: val } : null;
+  _cierreId = null;
+  if (val) {
+    cargarDashboard();
+    verificarSiigo(val);
+    cargarCierres();
+  } else {
+    document.getElementById('siigoStatus').className = 'badge badge-warn';
+    document.getElementById('siigoStatus').textContent = 'Siigo: sin config';
+  }
+}
+
+async function verificarSiigo(eid) {
+  // Silencioso — solo actualiza badge
+  const el = document.getElementById('siigoStatus');
+  try {
+    const r = await fetch(API + '/api/facturas?empresa_id=' + eid + '&limit=1');
+    if (r.ok) {
+      el.className = 'badge badge-ok';
+      el.textContent = 'Siigo: activo';
+    }
+  } catch {}
+}
+
+async function crearEmpresa() {
+  const nombre = document.getElementById('cfgNombre').value.trim();
+  const nit    = document.getElementById('cfgNit').value.trim();
+  if (!nombre || !nit) return showAlert('alertEmpresa', 'Completa nombre y NIT', 'err');
+  const r = await apiFetch('/api/empresas', 'POST', { nombre, nit });
+  if (r.ok) {
+    showAlert('alertEmpresa', '✅ Empresa creada', 'ok');
+    document.getElementById('cfgNombre').value = '';
+    document.getElementById('cfgNit').value = '';
+    cargarEmpresas();
+  } else {
+    showAlert('alertEmpresa', r.error, 'err');
+  }
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function cargarDashboard() {
+  if (!_empresa) return;
+  const r = await apiFetch('/api/resumen?empresa_id=' + _empresa.id);
+  if (!r.ok) return;
+
+  document.getElementById('st-total').textContent = r.total_facturas;
+  document.getElementById('st-causadas').textContent = r.causadas;
+  document.getElementById('st-pend').textContent = r.pendientes;
+  document.getElementById('st-monto').textContent = fmt(r.suma_total);
+
+  document.getElementById('resumenFiscal').innerHTML = `
+    <div class="result-row"><span class="label">IVA cobrado/descontable</span><span class="val">${fmt(r.suma_iva)}</span></div>
+    <div class="result-row"><span class="label">ReteFuente practicada</span><span class="val warn">${fmt(r.suma_retefuente)}</span></div>
+    <div class="result-row"><span class="label">ReteIVA practicada</span><span class="val warn">${fmt(r.suma_reteiva)}</span></div>
+    <div class="result-row"><span class="label">ReteICA practicada</span><span class="val warn">${fmt(r.suma_retica)}</span></div>
+    <div class="result-row"><span class="label">Total retenciones</span><span class="val err">${fmt(r.suma_retenciones)}</span></div>
+  `;
+}
+
+// ── Verificar XML ─────────────────────────────────────────────────────────────
+async function verificarXML(file) {
+  if (!file) return;
+  const div = document.getElementById('resultadoVerificacion');
+  div.className = 'card'; div.innerHTML = '<div class="flex"><span class="spinner"></span> Leyendo XML...</div>';
+
+  const form = new FormData();
+  form.append('xml', file);
+
+  try {
+    const resp = await fetch(API + '/api/xml/verificar', { method: 'POST', body: form });
+    const r = await resp.json();
+    if (!r.ok) { div.innerHTML = `<div class="alert alert-err">❌ ${r.error}</div>`; return; }
+    div.innerHTML = renderizarDatosXML(r.datos, file.name);
+  } catch (e) {
+    div.innerHTML = `<div class="alert alert-err">❌ Error: ${e.message}</div>`;
+  }
+}
+
+function renderizarDatosXML(d, nombre) {
+  const rf = d.resumen_fiscal || {};
+  const cab = d.cabecera || {};
+  const em = d.emisor || {};
+  const valido = d.valido;
+  const errores = d.errores || [];
+
+  const estadoBadge = valido
+    ? '<span class="badge badge-ok">✅ XML válido</span>'
+    : `<span class="badge badge-warn">⚠️ Con advertencias</span>`;
+
+  const alertasHTML = errores.length
+    ? `<div class="alert alert-warn">⚠️ ${errores.join('<br>')}</div>` : '';
+
+  return `
+    <div class="flex-between" style="margin-bottom:16px">
+      <div class="card-title">📄 ${nombre || 'Factura'}</div>
+      ${estadoBadge}
+    </div>
+    ${alertasHTML}
+    <div class="grid2">
+      <div>
+        <div class="muted" style="margin-bottom:8px;font-size:.8rem;text-transform:uppercase">Emisor</div>
+        <div><strong>${em.razon_social || '—'}</strong></div>
+        <div class="muted">NIT: ${em.nit || '—'}</div>
+        <div class="muted">Régimen: ${em.regimen || '—'}</div>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:8px;font-size:.8rem;text-transform:uppercase">Documento</div>
+        <div><strong>${cab.numero || '—'}</strong> &nbsp; ${cab.tipo_operacion || d.tipo_doc || ''}</div>
+        <div class="muted">Fecha: ${cab.fecha_emision || '—'}</div>
+        <div class="muted" style="font-size:.75rem;word-break:break-all">CUFE: ${cab.cufe || '—'}</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="result-panel">
+      <div class="result-row"><span class="label">Subtotal</span><span class="val">${fmt(rf.subtotal)}</span></div>
+      ${rf.iva_19 > 0 ? `<div class="result-row"><span class="label">IVA 19%</span><span class="val">${fmt(rf.iva_19)}</span></div>` : ''}
+      ${rf.iva_5  > 0 ? `<div class="result-row"><span class="label">IVA 5%</span><span class="val">${fmt(rf.iva_5)}</span></div>` : ''}
+      ${rf.base_exenta > 0 ? `<div class="result-row"><span class="label">Base exenta (IVA 0%)</span><span class="val muted">${fmt(rf.base_exenta)}</span></div>` : ''}
+      ${rf.retefuente > 0 ? `<div class="result-row"><span class="label">ReteFuente (practicada en XML)</span><span class="val warn">-${fmt(rf.retefuente)}</span></div>` : ''}
+      ${rf.reteiva    > 0 ? `<div class="result-row"><span class="label">ReteIVA</span><span class="val warn">-${fmt(rf.reteiva)}</span></div>` : ''}
+      ${rf.retica     > 0 ? `<div class="result-row"><span class="label">ReteICA</span><span class="val warn">-${fmt(rf.retica)}</span></div>` : ''}
+      <div class="result-row"><span class="label">Total a pagar</span><span class="val ok">${fmt(rf.total_pagar)}</span></div>
+      ${rf.total_retenciones > 0 ? `<div class="result-row"><span class="label">Neto a causar (descontando ret.)</span><span class="val">${fmt(rf.neto_causar)}</span></div>` : ''}
+    </div>
+    ${d.lineas?.length ? renderizarLineas(d.lineas) : ''}
+  `;
+}
+
+function renderizarLineas(lineas) {
+  return `
+    <div class="sep"></div>
+    <div class="card-title" style="margin-bottom:10px">Líneas de detalle (${lineas.length})</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Descripción</th><th>Cant.</th><th class="num">Precio</th><th class="num">IVA %</th><th class="num">Valor</th></tr></thead>
+      <tbody>${lineas.map((l,i) => `<tr>
+        <td>${i+1}</td>
+        <td>${l.descripcion||'—'}</td>
+        <td class="num">${l.cantidad}</td>
+        <td class="num">${fmt(l.precio_unitario)}</td>
+        <td class="num">${l.iva_tarifa}%</td>
+        <td class="num">${fmt(l.valor_linea)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  `;
+}
+
+// ── Causar XML ────────────────────────────────────────────────────────────────
+async function causarXML(file) {
+  if (!file) return;
+  if (!_empresa) {
+    document.getElementById('alertCausarXml').innerHTML = '<div class="alert alert-warn">⚠️ Selecciona una empresa primero</div>';
+    return;
+  }
+
+  const div = document.getElementById('resultadoCausion');
+  div.className = 'card';
+  div.innerHTML = '<div class="flex"><span class="spinner"></span> Causando en Siigo...</div>';
+
+  const form = new FormData();
+  form.append('xml', file);
+  form.append('empresa_id', _empresa.id);
+
+  try {
+    const resp = await fetch(API + '/api/xml/causar', { method: 'POST', body: form });
+    const r = await resp.json();
+    if (!r.ok) {
+      div.innerHTML = `<div class="alert alert-err">❌ ${r.error}</div>`;
+      return;
+    }
+    const s = r.siigo || {};
+    const rf = r.resumen || {};
+    div.innerHTML = `
+      <div class="alert alert-ok">✅ Factura causada exitosamente en Siigo</div>
+      <div class="result-panel">
+        <div class="result-row"><span class="label">Siigo ID</span><span class="val ok">${s.siigo_id||'—'}</span></div>
+        <div class="result-row"><span class="label">Número Siigo</span><span class="val">${s.siigo_numero||'—'}</span></div>
+        <div class="result-row"><span class="label">Proveedor ID</span><span class="val">${s.proveedor_id||'—'}</span></div>
+        <div class="result-row"><span class="label">Total causado</span><span class="val ok">${fmt(s.total_causado)}</span></div>
+      </div>
+      ${r.advertencias?.length ? `<div class="alert alert-warn mt">⚠️ ${r.advertencias.join('<br>')}</div>` : ''}
+    `;
+    cargarDashboard();
+  } catch (e) {
+    div.innerHTML = `<div class="alert alert-err">❌ ${e.message}</div>`;
+  }
+}
+
+// ── Excel ─────────────────────────────────────────────────────────────────────
+async function cargarExcel(file) {
+  if (!file) return;
+  const div = document.getElementById('resultadoExcel');
+  div.classList.remove('hidden');
+  div.innerHTML = '<div class="card flex"><span class="spinner"></span> Procesando Excel...</div>';
+
+  const form = new FormData();
+  form.append('excel', file);
+
+  try {
+    const resp = await fetch(API + '/api/excel/procesar', { method: 'POST', body: form });
+    const r = await resp.json();
+    if (!r.ok) {
+      div.innerHTML = `<div class="alert alert-err">❌ ${r.error}</div>`;
+      return;
+    }
+    _excelFacturas = r.facturas;
+    renderizarTablaExcel(r, div);
+  } catch (e) {
+    div.innerHTML = `<div class="alert alert-err">❌ ${e.message}</div>`;
+  }
+}
+
+function renderizarTablaExcel(r, div) {
+  const facts = r.facturas || [];
+  const errs  = r.errores  || [];
+  const res   = r.resumen  || {};
+  const cols  = r.columnas || [];
+
+  const badgeColor = errs.length > 0 ? 'warn' : 'ok';
+  document.getElementById('excelResumenBadge').innerHTML =
+    `<span class="badge badge-${badgeColor}">${facts.length} facturas / ${errs.length} errores</span>`;
+
+  const btnCausar = document.getElementById('btnCausarExcel');
+  if (facts.length > 0 && _empresa) {
+    btnCausar.disabled = false;
+  }
+
+  const colsHtml = cols.map(c => `<span class="badge badge-info" style="margin:2px">${c}</span>`).join('');
+
+  div.innerHTML = `
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:16px">
+        <div class="card-title" style="margin:0">📊 ${facts.length} facturas detectadas</div>
+        <div class="flex">
+          <span id="excelResumenBadge2" class="badge badge-${badgeColor}">${facts.length} ok / ${errs.length} error</span>
+          <button class="btn btn-success" id="btnCausarExcel" onclick="confirmarCausarExcel()" ${!_empresa||!facts.length?'disabled':''}>
+            ⚡ Causar en Siigo (${facts.length})
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div class="muted" style="margin-bottom:4px;font-size:.78rem">Columnas detectadas:</div>
+        ${colsHtml}
+      </div>
+
+      ${errs.length ? `<div class="alert alert-warn">⚠️ ${errs.length} fila(s) con error:<br>${errs.map(e=>`Fila ${e.fila}: ${e.error}`).join('<br>')}</div>` : ''}
+
+      <div class="result-panel" style="margin-bottom:16px">
+        <div class="result-row"><span class="label">Total subtotal</span><span class="val">${fmt(res.total_subtotal)}</span></div>
+        <div class="result-row"><span class="label">Total IVA</span><span class="val">${fmt(res.total_iva)}</span></div>
+        <div class="result-row"><span class="label">Total bruto</span><span class="val">${fmt(res.total_bruto)}</span></div>
+        <div class="result-row"><span class="label">ReteFuente total</span><span class="val warn">${fmt(res.total_retefuente)}</span></div>
+        <div class="result-row"><span class="label">ReteIVA total</span><span class="val warn">${fmt(res.total_reteiva)}</span></div>
+        <div class="result-row"><span class="label">Total neto a pagar</span><span class="val ok">${fmt(res.total_neto_pagar)}</span></div>
+      </div>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Fila</th><th>NIT</th><th>Nombre</th><th>N° Factura</th><th>Fecha</th>
+          <th class="num">Subtotal</th><th class="num">IVA</th><th class="num">Total</th>
+          <th class="num">ReteFte</th><th class="num">Neto</th></tr></thead>
+        <tbody>${facts.map(f => `<tr>
+          <td class="muted">${f.fila}</td>
+          <td>${f.nit||'—'}</td>
+          <td>${f.nombre||'—'}</td>
+          <td>${f.numero||'—'}</td>
+          <td>${f.fecha||'—'}</td>
+          <td class="num">${fmt(f.subtotal)}</td>
+          <td class="num">${fmt(f.iva_total)}</td>
+          <td class="num">${fmt(f.total)}</td>
+          <td class="num ${f.retefuente>0?'':'muted'}">${fmt(f.retefuente)}</td>
+          <td class="num ok">${fmt(f.neto_pagar)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+    <div id="resultadoCausionExcel"></div>
+  `;
+}
+
+async function confirmarCausarExcel() {
+  if (!_empresa) return alert('Selecciona una empresa primero');
+  if (!_excelFacturas.length) return;
+  if (!confirm(`¿Causar ${_excelFacturas.length} facturas en Siigo?\n\nEsta acción no se puede deshacer.`)) return;
+
+  const divRes = document.getElementById('resultadoCausionExcel') || document.createElement('div');
+  divRes.id = 'resultadoCausionExcel';
+  divRes.innerHTML = '<div class="card flex"><span class="spinner"></span> Causando facturas en Siigo...</div>';
+
+  const btn = document.getElementById('btnCausarExcel');
+  if (btn) btn.disabled = true;
+
+  try {
+    const resp = await fetch(API + '/api/excel/causar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ empresa_id: _empresa.id, facturas: _excelFacturas }),
+    });
+    const r = await resp.json();
+    if (!r.ok) {
+      divRes.innerHTML = `<div class="alert alert-err">❌ ${r.error}</div>`;
+      return;
+    }
+    divRes.innerHTML = `
+      <div class="card">
+        <div class="card-title">✅ Causación completada</div>
+        <div class="grid2">
+          <div class="stat ok"><div class="stat-label">Causadas OK</div><div class="stat-val">${r.causadas}</div></div>
+          <div class="stat ${r.errores>0?'err':'ok'}"><div class="stat-label">Con error</div><div class="stat-val">${r.errores}</div></div>
+        </div>
+        ${r.errores > 0 ? `
+          <div class="sep"></div>
+          <div class="card-title" style="margin-bottom:8px">Errores</div>
+          ${r.detalle_err.map(e => `<div class="alert alert-err">Fila ${e.fila} · ${e.numero}: ${e.error}</div>`).join('')}
+        ` : ''}
+        ${r.causadas > 0 ? `
+          <div class="sep"></div>
+          <div class="card-title" style="margin-bottom:8px">Causadas en Siigo</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Fila</th><th>N° Factura</th><th>NIT</th><th>Siigo ID</th><th>Siigo Número</th></tr></thead>
+            <tbody>${r.detalle_ok.map(x=>`<tr>
+              <td>${x.fila}</td><td>${x.numero||'—'}</td><td>${x.nit||'—'}</td>
+              <td class="ok">${x.siigo_id||'—'}</td><td>${x.siigo_numero||'—'}</td>
+            </tr>`).join('')}</tbody>
+          </table></div>
+        ` : ''}
+      </div>
+    `;
+    cargarDashboard();
+  } catch (e) {
+    divRes.innerHTML = `<div class="alert alert-err">❌ ${e.message}</div>`;
+  }
+}
+
+// ── Historial ─────────────────────────────────────────────────────────────────
+async function cargarHistorial() {
+  if (!_empresa) return;
+  const estado = document.getElementById('filtEstado')?.value || '';
+  const origen = document.getElementById('filtOrigen')?.value || '';
+  let url = `/api/facturas?empresa_id=${_empresa.id}&limit=200`;
+  if (estado) url += `&estado=${estado}`;
+  if (origen) url += `&origen=${origen}`;
+
+  const div = document.getElementById('tablaHistorial');
+  div.innerHTML = '<div class="flex"><span class="spinner"></span> Cargando...</div>';
+
+  const r = await apiFetch(url);
+  if (!r.ok || !r.facturas.length) {
+    div.innerHTML = '<div class="muted" style="text-align:center;padding:30px">No hay facturas registradas</div>';
+    return;
+  }
+
+  div.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>ID</th><th>Número</th><th>Fecha</th><th>Proveedor</th><th>NIT</th>
+      <th class="num">Subtotal</th><th class="num">IVA</th><th class="num">Total</th>
+      <th class="num">Ret.Fte</th><th>Estado</th><th>Origen</th><th>Siigo</th>
+    </tr></thead>
+    <tbody>${r.facturas.map(f => `<tr>
+      <td class="muted">${f.id}</td>
+      <td>${f.numero||'—'}</td>
+      <td>${f.fecha||'—'}</td>
+      <td>${f.nombre_proveedor||'—'}</td>
+      <td class="muted">${f.nit_proveedor||'—'}</td>
+      <td class="num">${fmt(f.subtotal)}</td>
+      <td class="num">${fmt(f.iva_total)}</td>
+      <td class="num">${fmt(f.total)}</td>
+      <td class="num ${f.retefuente>0?'warn':''}">${fmt(f.retefuente)}</td>
+      <td><span class="badge ${f.estado==='CAUSADA'?'badge-ok':'badge-warn'}">${f.estado}</span></td>
+      <td><span class="badge badge-info">${f.origen}</span></td>
+      <td class="muted">${f.siigo_numero||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── Config Siigo ──────────────────────────────────────────────────────────────
+async function probarSiigo() {
+  const username   = document.getElementById('siigoUser').value.trim();
+  const access_key = document.getElementById('siigoKey').value.trim();
+  const partner_id = document.getElementById('siigoPartner').value.trim();
+  if (!username || !access_key) return showAlert('siigoPruebaResult', 'Completa usuario y access_key', 'warn');
+
+  document.getElementById('siigoPruebaResult').innerHTML = '<div class="flex"><span class="spinner"></span> Probando...</div>';
+  const r = await apiFetch('/api/siigo/probar', 'POST', { username, access_key, partner_id });
+  if (r.ok) {
+    document.getElementById('siigoPruebaResult').innerHTML =
+      `<div class="alert alert-ok">✅ Conexión exitosa · Usuario: ${r.usuario || username} · Empresa: ${r.empresa || '—'}</div>`;
+  } else {
+    document.getElementById('siigoPruebaResult').innerHTML =
+      `<div class="alert alert-err">❌ ${r.error}</div>`;
+  }
+}
+
+async function guardarSiigo() {
+  if (!_empresa) return showAlert('alertSiigo', 'Selecciona una empresa', 'warn');
+  const body = {
+    empresa_id:    _empresa.id,
+    username:      document.getElementById('siigoUser').value.trim(),
+    access_key:    document.getElementById('siigoKey').value.trim(),
+    partner_id:    document.getElementById('siigoPartner').value.trim(),
+    tipo_doc_id:   parseInt(document.getElementById('siigoTipoDoc').value) || 24,
+    cuenta_gasto:  document.getElementById('siigoCuenta').value.trim() || '513595',
+  };
+  if (!body.username || !body.access_key) return showAlert('alertSiigo', 'username y access_key son obligatorios', 'err');
+  const r = await apiFetch('/api/siigo/config', 'POST', body);
+  if (r.ok) {
+    showAlert('alertSiigo', `✅ ${r.mensaje} · Siigo: ${r.siigo_usuario || body.username}`, 'ok');
+    document.getElementById('siigoStatus').className = 'badge badge-ok';
+    document.getElementById('siigoStatus').textContent = 'Siigo: activo';
+  } else {
+    showAlert('alertSiigo', r.error, 'err');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function apiFetch(url, method='GET', body=null) {
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const resp = await fetch(API + url, opts);
+    return await resp.json();
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function fmt(n) {
+  if (n === null || n === undefined || n === '') return '—';
+  const v = parseFloat(n);
+  if (isNaN(v) || v === 0) return '$0';
+  return '$' + Math.round(v).toLocaleString('es-CO');
+}
+
+function showAlert(id, msg, tipo='info') {
+  const cls = { ok:'alert-ok', err:'alert-err', warn:'alert-warn', info:'alert-info' };
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = `<div class="alert ${cls[tipo]||cls.info}">${msg}</div>`;
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────────
+['dropZoneV','dropZoneC','dropZoneE','dropBanco','dropRet'].forEach(id => {
+  const z = document.getElementById(id);
+  if (!z) return;
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('drag'); });
+  z.addEventListener('dragleave', () => z.classList.remove('drag'));
+  z.addEventListener('drop', e => {
+    e.preventDefault(); z.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    if (id === 'dropZoneV') verificarXML(f);
+    else if (id === 'dropZoneC') causarXML(f);
+    else if (id === 'dropZoneE') cargarExcel(f);
+    else if (id === 'dropBanco') { const fi = document.getElementById('fileBanco'); const dt = new DataTransfer(); dt.items.add(f); fi.files = dt.files; cierreSubirBanco(fi); }
+    else if (id === 'dropRet')   { const fi = document.getElementById('fileRet');   const dt = new DataTransfer(); dt.items.add(f); fi.files = dt.files; cierreSubirRetenciones(fi); }
+  });
+});
+
+// ── Cierre Contable ───────────────────────────────────────────────────────────
+let _cierreId = null;
+
+async function cierreIniciar() {
+  if (!_empresa) return alert('Selecciona una empresa primero');
+  const periodo = document.getElementById('cierrePeriodo').value;
+  if (!periodo) return alert('Selecciona el período a cerrar');
+
+  document.getElementById('cierreInfoSiigo').classList.remove('hidden');
+  document.getElementById('ci-estado').textContent = '⏳';
+
+  const r = await apiFetch('/api/cierre/iniciar', 'POST', {
+    empresa_id: _empresa.id,
+    periodo: periodo
+  });
+
+  if (!r.ok) {
+    document.getElementById('ci-estado').textContent = '❌';
+    return alert('Error: ' + r.error);
+  }
+
+  _cierreId = r.cierre_id;
+  const ex = r.datos_siigo?.extraido || {};
+  document.getElementById('ci-cuentas').textContent = ex.total_cuentas ?? '0';
+  document.getElementById('ci-comprobantes').textContent = ex.total_comprobantes ?? '0';
+  document.getElementById('ci-fv').textContent = ex.total_fv ?? '0';
+  document.getElementById('ci-estado').textContent = r.datos_siigo?.errores?.length ? '⚠️' : '✅';
+
+  // Mostrar errores/advertencias de Siigo
+  const alertas = r.datos_siigo?.errores || [];
+  if (alertas.length) {
+    document.getElementById('cierreAlertas').classList.remove('hidden');
+    document.getElementById('cierreAlertas').innerHTML =
+      `<div class="alert alert-warn">⚠️ Algunas descargas de Siigo tuvieron problemas:<ul style="margin:8px 0 0 16px">${
+        alertas.map(a => `<li>${a}</li>`).join('')}</ul></div>`;
+  }
+
+  // Mostrar archivos manuales requeridos
+  const manual = r.manual_requerido || [];
+  document.getElementById('cierreManualList').innerHTML = manual.map(m => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:1.1rem">${m.obligatorio ? '🔴' : '🟡'}</span>
+      <div>
+        <div style="font-weight:600;font-size:.9rem">${m.item}</div>
+        <div style="color:var(--muted);font-size:.8rem">${m.descripcion}</div>
+        <div style="font-size:.75rem;color:var(--accent);margin-top:3px">Columnas: ${m.columnas?.join(', ')}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('cierreStep2').classList.remove('hidden');
+  document.getElementById('cierreStep3').classList.remove('hidden');
+  cargarCierres();
+}
+
+async function cierreSubirBanco(input) {
+  if (!_cierreId) return alert('Inicia el cierre primero');
+  const file = input.files[0];
+  if (!file) return;
+
+  const fd = new FormData();
+  fd.append('banco', file);
+  fd.append('cuenta_banco', document.getElementById('cierreCuentaBanco').value);
+
+  const resp = await fetch('/api/cierre/' + _cierreId + '/banco', { method: 'POST', body: fd });
+  const r = await resp.json();
+
+  if (!r.ok) return alert('Error banco: ' + r.error);
+
+  document.getElementById('bancoPrev').classList.remove('hidden');
+  document.getElementById('bancoPrev').innerHTML = `
+    <div class="alert alert-ok">
+      ✅ ${r.mensaje} · Débitos: ${fmt(r.total_debitos)} · Créditos: ${fmt(r.total_creditos)} · Saldo: ${fmt(r.saldo_final)}
+    </div>`;
+}
+
+async function cierreSubirRetenciones(input) {
+  if (!_cierreId) return alert('Inicia el cierre primero');
+  const file = input.files[0];
+  if (!file) return;
+
+  const fd = new FormData();
+  fd.append('retenciones', file);
+
+  const resp = await fetch('/api/cierre/' + _cierreId + '/retenciones', { method: 'POST', body: fd });
+  const r = await resp.json();
+
+  if (!r.ok) return alert('Error retenciones: ' + r.error);
+
+  document.getElementById('retPrev').classList.remove('hidden');
+  document.getElementById('retPrev').innerHTML =
+    `<div class="alert alert-ok">✅ ${r.mensaje} · Total: ${fmt(r.total)}</div>`;
+}
+
+async function cierreGenerar() {
+  if (!_cierreId) return alert('Inicia el cierre primero');
+
+  document.getElementById('cierreProgress').classList.remove('hidden');
+
+  const r = await apiFetch('/api/cierre/' + _cierreId + '/generar', 'POST', {});
+
+  document.getElementById('cierreProgress').classList.add('hidden');
+
+  if (!r.ok) return alert('Error generando cierre: ' + r.error);
+
+  renderCierreResultados(r.estados);
+  document.getElementById('cierreResultados').classList.remove('hidden');
+  document.getElementById('cierreResultados').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function cierreCausar() {
+  if (!_cierreId) return;
+  if (!confirm('¿Causar todas las provisiones en Siigo?')) return;
+
+  const r = await apiFetch('/api/cierre/' + _cierreId + '/causar', 'POST', {});
+  if (r.ok) {
+    alert(`✅ ${r.causadas} causaciones enviadas a Siigo. ${r.errores > 0 ? r.errores + ' con error.' : ''}`);
+  } else {
+    alert('Error: ' + r.error);
+  }
+}
+
+function renderCierreResultados(estados) {
+  if (!estados) return;
+
+  const esf = estados.esf || {};
+  const eri = estados.eri || {};
+  const ret = estados.retenciones || {};
+  const causaciones = estados.causaciones || [];
+  const notas = estados.notas_niif || [];
+  const checklist = estados.checklist || [];
+
+  // Fecha de corte
+  if (estados.fecha_corte) {
+    document.getElementById('esf-fecha').textContent = 'Al ' + estados.fecha_corte;
+  }
+
+  // ── Balance General ──
+  function renderGrupo(grupos, contenedor) {
+    const el = document.getElementById(contenedor);
+    if (!el) return;
+    el.innerHTML = '';
+    (grupos || []).forEach(g => {
+      el.innerHTML += `
+        <div style="margin-bottom:12px">
+          <div style="font-weight:600;font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${g.nombre}</div>
+          ${(g.cuentas||[]).map(c => `
+            <div style="display:flex;justify-content:space-between;padding:3px 0 3px 12px;font-size:.85rem;border-bottom:1px dotted var(--border)">
+              <span>${c.cuenta} ${c.nombre}</span>
+              <span>${fmt(c.saldo)}</span>
+            </div>`).join('')}
+          <div style="display:flex;justify-content:space-between;font-weight:600;padding:4px 0;font-size:.88rem">
+            <span style="color:var(--muted)">Subtotal ${g.nombre}</span>
+            <span>${fmt(g.total)}</span>
+          </div>
+        </div>`;
+    });
+  }
+
+  // Adaptar estructura real del backend
+  const actGrupos = [
+    {nombre:'Activo corriente',    cuentas:(esf.activo_corriente?.items||[]).map(i=>({cuenta:i.cuenta,nombre:i.nombre,saldo:i.saldo})),  total:esf.activo_corriente?.total||0},
+    {nombre:'Activo no corriente', cuentas:(esf.activo_no_corriente?.items||[]).map(i=>({cuenta:i.cuenta,nombre:i.nombre,saldo:i.saldo})),total:esf.activo_no_corriente?.total||0},
+  ];
+  const pasGrupos = [
+    {nombre:'Pasivo corriente',    cuentas:(esf.pasivo_corriente?.items||[]).map(i=>({cuenta:i.cuenta,nombre:i.nombre,saldo:Math.abs(i.saldo)})),  total:Math.abs(esf.pasivo_corriente?.total||0)},
+    {nombre:'Pasivo no corriente', cuentas:(esf.pasivo_no_corriente?.items||[]).map(i=>({cuenta:i.cuenta,nombre:i.nombre,saldo:Math.abs(i.saldo)})),total:Math.abs(esf.pasivo_no_corriente?.total||0)},
+  ];
+  const patGrupos = [{nombre:'Patrimonio', cuentas:(esf.patrimonio?.items||[]).map(i=>({cuenta:i.cuenta,nombre:i.nombre,saldo:Math.abs(i.saldo)})), total:Math.abs(esf.patrimonio?.total||0)}];
+
+  renderGrupo(actGrupos, 'esf-activos');
+  renderGrupo(pasGrupos, 'esf-pasivos');
+  renderGrupo(patGrupos, 'esf-patrimonio');
+
+  const totalAct = esf.total_activo || 0;
+  const totalPas = Math.abs(esf.total_pasivo || 0);
+  const totalPat = Math.abs(esf.total_patrimonio || 0);
+
+  document.getElementById('esf-total-activos').textContent = fmt(totalAct);
+  document.getElementById('esf-total-pasivos').textContent = fmt(totalPas);
+  document.getElementById('esf-total-paspat').textContent  = fmt(totalPas + totalPat);
+
+  const ecuOk = esf.ecuacion_ok !== undefined ? esf.ecuacion_ok : Math.abs(totalAct - (totalPas + totalPat)) < 1000;
+  document.getElementById('esf-ecuacion').innerHTML = ecuOk
+    ? `<span style="color:var(--ok)">✅ Ecuación patrimonial cuadra: Activos = Pasivos + Patrimonio</span>`
+    : `<span style="color:var(--err)">⚠️ Diferencia en ecuación: ${fmt(totalAct - (totalPas + totalPat))}</span>`;
+  document.getElementById('esf-ecuacion').style.background = ecuOk ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.1)';
+
+  // ── Estado de Resultados ──
+  // ERI usa estructura real del backend
+  const ingrOp  = eri.ingresos_operacionales?.total  || eri.ingresos_operacionales  || 0;
+  const ingrNo  = eri.ingresos_no_operacionales?.total|| eri.ingresos_no_operacionales|| 0;
+  const costos  = eri.costo_ventas?.total             || eri.costo_ventas             || 0;
+  const gastOp  = eri.gastos_operacionales?.total     || eri.gastos_operacionales     || 0;
+  const gastNoOp= eri.gastos_no_operacionales?.total  || eri.gastos_no_operacionales  || 0;
+  const impRenta= eri.impuesto_renta?.total           || eri.impuesto_renta           || 0;
+  const utilBruta = eri.utilidad_bruta || (ingrOp - costos);
+  const uaii      = eri.uaii           || (utilBruta - gastOp);
+  const utilNeta  = eri.utilidad_neta  || (uaii + ingrNo - gastNoOp - impRenta);
+  const ebitda    = eri.ebitda         || uaii;
+  const mgBruto   = ingrOp > 0 ? utilBruta / ingrOp : 0;
+  const mgNeto    = ingrOp > 0 ? utilNeta  / ingrOp : 0;
+
+  document.getElementById('eri-izq').innerHTML = `
+    <div class="stat-label" style="margin-bottom:8px">INGRESOS</div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span>Ingresos operacionales</span><span style="color:var(--ok)">${fmt(ingrOp)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0">
+      <span>Ingresos no operacionales</span><span>${fmt(ingrNo)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;border-top:2px solid var(--border);margin-top:4px">
+      <span>TOTAL INGRESOS</span><span style="color:var(--ok)">${fmt(ingrOp + ingrNo)}</span></div>
+    <div style="margin-top:16px" class="stat-label">COSTOS</div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span>Costo de ventas</span><span style="color:var(--err)">(${fmt(costos)})</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:600">
+      <span>UTILIDAD BRUTA</span><span style="color:var(--warn)">${fmt(utilBruta)}</span></div>`;
+
+  document.getElementById('eri-der').innerHTML = `
+    <div class="stat-label" style="margin-bottom:8px">GASTOS</div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span>Gastos operacionales</span><span style="color:var(--err)">(${fmt(gastOp)})</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:600;border-bottom:1px solid var(--border)">
+      <span>UAII (EBIT)</span><span style="color:var(--accent)">${fmt(uaii)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0">
+      <span>Gastos no operacionales</span><span style="color:var(--err)">(${fmt(gastNoOp)})</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span>Prov. Impuesto renta</span><span style="color:var(--err)">(${fmt(impRenta)})</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;font-size:1.05rem">
+      <span>UTILIDAD NETA</span><span style="color:${utilNeta>=0?'var(--ok)':'var(--err)'}">${fmt(utilNeta)}</span></div>
+    <div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:.82rem">
+      <div>EBITDA: <strong>${fmt(ebitda)}</strong></div>
+      <div>Margen bruto: <strong>${(mgBruto*100).toFixed(1)}%</strong></div>
+      <div>Margen neto: <strong>${(mgNeto*100).toFixed(1)}%</strong></div>
+    </div>`;
+
+  // ── Retenciones ──
+  const retDoc = document.getElementById('cr-ret-tabla');
+  if (ret && Object.keys(ret).length) {
+    retDoc.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Cuenta</th><th>Concepto</th><th class="num">Saldo</th></tr></thead>
+      <tbody>
+        ${Object.entries(ret).map(([k,v])=>`<tr>
+          <td>${k}</td>
+          <td>${v.nombre||k}</td>
+          <td class="num ${v.saldo>0?'ok':''}">${fmt(v.saldo)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  } else {
+    retDoc.innerHTML = '<div class="muted" style="text-align:center;padding:20px">Sin saldos de retenciones en el período</div>';
+  }
+
+  // ── Causaciones ──
+  const provLista = document.getElementById('cr-prov-lista');
+  if (causaciones.length) {
+    provLista.innerHTML = causaciones.map((c, i) => `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <div><strong>${c.tipo}</strong> — ${c.concepto}</div>
+          <div style="color:var(--accent);font-weight:600">${fmt(c.valor_total)}</div>
+        </div>
+        <div class="table-wrap"><table style="font-size:.8rem">
+          <thead><tr><th>Cuenta</th><th>Descripción</th><th class="num">Débito</th><th class="num">Crédito</th></tr></thead>
+          <tbody>${(c.movimientos||[]).map(m=>`<tr>
+            <td>${m.cuenta}</td><td>${m.descripcion||m.cuenta}</td>
+            <td class="num">${(m.db||m.debito||0)>0?fmt(m.db||m.debito):'—'}</td>
+            <td class="num">${(m.cr||m.credito||0)>0?fmt(m.cr||m.credito):'—'}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`).join('');
+  } else {
+    provLista.innerHTML = '<div class="muted" style="text-align:center;padding:20px">Sin causaciones automáticas (carga extracto bancario y saldos para generarlas)</div>';
+  }
+
+  // ── Notas NIIF ──
+  const notasEl = document.getElementById('cr-niif-notas');
+  if (notas.length) {
+    notasEl.innerHTML = notas.map((n, i) => `
+      <div style="border-bottom:1px solid var(--border);padding:16px 0">
+        <div style="font-weight:600;margin-bottom:6px">Nota ${i+1}. ${n.titulo}</div>
+        <div style="color:var(--muted);font-size:.85rem;line-height:1.6">${n.politica}</div>
+        ${n.periodo ? `<div style="font-size:.8rem;color:var(--accent);margin-top:4px">Período: ${n.periodo}</div>` : ''}
+      </div>`).join('');
+  } else {
+    notasEl.innerHTML = '<div class="muted" style="padding:20px">Las notas se generan con el cierre.</div>';
+  }
+
+  // ── Checklist ──
+  const checkEl = document.getElementById('cr-check-lista');
+  if (checklist.length) {
+    checkEl.innerHTML = checklist.map(item => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:1.3rem">${(item.ok===true||(item.estado||'').includes('✅')) ? '✅' : '⚠️'}</span>
+        <div>
+          <div style="font-weight:600;font-size:.9rem">${item.item}</div>
+          <div style="color:var(--muted);font-size:.8rem">${item.detalle||item.estado||''}</div>
+          ${item.diferencia !== undefined ? `<div style="font-size:.8rem;color:${(item.ok===true||(item.estado||'').includes('✅'))?'var(--ok)':'var(--warn)'}">Diferencia: ${fmt(item.diferencia)}</div>` : ''}
+        </div>
+      </div>`).join('');
+  } else {
+    checkEl.innerHTML = '<div class="muted" style="padding:20px">Checklist disponible después de generar el cierre.</div>';
+  }
+}
+
+async function cargarCierres() {
+  if (!_empresa) return;
+  const r = await apiFetch('/api/cierres?empresa_id=' + _empresa.id);
+  const el = document.getElementById('tablaCierres');
+  if (!r.ok || !r.cierres?.length) {
+    el.innerHTML = '<div class="muted" style="text-align:center;padding:20px">Sin cierres registrados para esta empresa</div>';
+    return;
+  }
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Período</th><th>Estado</th><th>Creado</th><th>Actualizado</th><th></th></tr></thead>
+    <tbody>${r.cierres.map(c => `<tr>
+      <td><strong>${c.periodo}</strong></td>
+      <td><span class="badge ${c.estado==='CAUSADO'?'badge-ok':c.estado==='GENERADO'?'badge-info':'badge-warn'}">${c.estado}</span></td>
+      <td class="muted">${(c.creado||'').substring(0,10)}</td>
+      <td class="muted">${(c.actualizado||'').substring(0,10)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="cargarCierreExistente(${c.id},'${c.periodo}')">📂 Ver</button></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function cargarCierreExistente(id, periodo) {
+  _cierreId = id;
+  document.getElementById('cierrePeriodo').value = periodo;
+
+  const r = await apiFetch('/api/cierre/' + id);
+  if (!r.ok) return alert('Error: ' + r.error);
+
+  const estados = r.cierre?.estados_fin;
+  if (estados) {
+    renderCierreResultados(typeof estados === 'string' ? JSON.parse(estados) : estados);
+    document.getElementById('cierreResultados').classList.remove('hidden');
+    document.getElementById('cierreStep2').classList.remove('hidden');
+    document.getElementById('cierreStep3').classList.remove('hidden');
+    document.getElementById('cierreInfoSiigo').classList.remove('hidden');
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await cargarEmpresas();
+  // Poner período actual por defecto
+  const hoy = new Date();
+  const mes = String(hoy.getMonth()+1).padStart(2,'0');
+  const p = document.getElementById('cierrePeriodo');
+  if (p) p.value = `${hoy.getFullYear()}-${mes}`;
+})();
+</script>
+</body>
+</html>

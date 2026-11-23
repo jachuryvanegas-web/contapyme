@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: facturador-siigo
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api.app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    envVars:
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: datos-facturador
+      mountPath: /data
+      sizeGB: 1
