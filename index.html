@@ -584,7 +584,7 @@ async function cargarEmpresas() {
 
 async function eliminarEmpresa(id, nombre) {
   if (!confirm(`¿Eliminar empresa "${nombre}"? Esto borra su configuración de Siigo.`)) return;
-  const r = await apiFetch(`/api/empresas/${id}`, {method:'DELETE'});
+  const r = await apiFetch(`/api/empresas/${id}`, 'DELETE');
   if (r.mensaje) { alert('Empresa eliminada'); cargarEmpresas(); }
   else alert(r.error || 'Error al eliminar');
 }
