@@ -167,6 +167,17 @@ def crear_empresa():
         con.close()
     return ok({'id': eid, 'mensaje': 'Empresa creada'})
 
+@app.route('/api/empresas/<int:eid>', methods=['DELETE'])
+def eliminar_empresa(eid):
+    con = get_db()
+    try:
+        con.execute('DELETE FROM configuracion_siigo WHERE empresa_id=?', (eid,))
+        con.execute('DELETE FROM empresas WHERE id=?', (eid,))
+        con.commit()
+    finally:
+        con.close()
+    return ok({'mensaje': 'Empresa eliminada'})
+
 # ── API: Configuración Siigo ──────────────────────────────────────────────────
 
 @app.route('/api/siigo/config', methods=['POST'])

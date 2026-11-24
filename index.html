@@ -571,14 +571,22 @@ async function cargarEmpresas() {
       lista.innerHTML = '<div class="muted" style="padding:16px;text-align:center">No hay empresas. Crea una arriba.</div>';
     } else {
       lista.innerHTML = `<div class="table-wrap"><table>
-        <thead><tr><th>ID</th><th>Razón social</th><th>NIT</th><th>Creado</th></tr></thead>
+        <thead><tr><th>ID</th><th>Razón social</th><th>NIT</th><th>Creado</th><th></th></tr></thead>
         <tbody>${r.empresas.map(e => `<tr>
           <td>${e.id}</td><td><strong>${e.nombre}</strong></td><td>${e.nit}</td>
           <td class="muted">${e.creado?.split('T')[0]||''}</td>
+          <td><button class="btn btn-sm" style="background:var(--err,#c0392b);color:#fff;padding:3px 10px;cursor:pointer" onclick="eliminarEmpresa(${e.id},'${e.nombre}')">🗑</button></td>
         </tr>`).join('')}</tbody>
       </table></div>`;
     }
   }
+}
+
+async function eliminarEmpresa(id, nombre) {
+  if (!confirm(`¿Eliminar empresa "${nombre}"? Esto borra su configuración de Siigo.`)) return;
+  const r = await apiFetch(`/api/empresas/${id}`, {method:'DELETE'});
+  if (r.mensaje) { mostrarToast('Empresa eliminada'); cargarEmpresas(); }
+  else mostrarToast(r.error || 'Error al eliminar', true);
 }
 
 function cambiarEmpresa(val) {
