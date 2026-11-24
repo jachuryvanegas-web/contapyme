@@ -89,27 +89,21 @@ class SiigoExtractor:
 
     def _extraer_balance_prueba(self, fecha_ini: str, fecha_fin: str) -> list:
         """
-        Siigo no tiene endpoint directo de balance de prueba en la API pública,
-        pero podemos reconstruirlo sumando los movimientos por cuenta.
+        Obtiene el balance de prueba usando POST /v1/test-balance-report (Siigo Premium).
         """
+        año, mes_ini = fecha_ini[:7].split('-')
+        _, mes_fin   = fecha_fin[:7].split('-')
         try:
-            # Intentar endpoint de balance si existe
-            data = self.cliente._get('/v1/accounting-entries/trial-balance', params={
-                'start_date': fecha_ini,
-                'end_date':   fecha_fin,
+            data = self.cliente._post('/v1/test-balance-report', {
+                'year':                  int(año),
+                'month_start':           int(mes_ini),
+                'month_end':             int(mes_fin),
+                'includes_tax_difference': False,
             })
-            return data.get('results', [])
-        except SiigoError:
-            pass
-
-        # Alternativa: extraer del libro mayor por cuenta
-        try:
-            data = self.cliente._get('/v1/accounting-entries', params={
-                'date_start': fecha_ini,
-                'date_end':   fecha_fin,
-                'page_size':  200,
-            })
-            return self._consolidar_saldos(data.get('results', []))
+            # Puede venir como lista directa o como {'results': [...]}
+            if isinstance(data, list):
+                return data
+            return data.get('results', data.get('data', []))
         except SiigoError as e:
             raise Exception(f'No se pudo obtener el balance de prueba: {e}')
 
@@ -139,24 +133,16 @@ class SiigoExtractor:
         return list(cuentas.values())
 
     def _extraer_comprobantes(self, fecha_ini: str, fecha_fin: str) -> list:
+        """Obtiene comprobantes contables usando GET /v1/journals (Siigo Premium)."""
         try:
-            data = self.cliente._get('/v1/journal-vouchers', params={
+            data = self.cliente._get('/v1/journals', params={
                 'date_start': fecha_ini,
                 'date_end':   fecha_fin,
                 'page_size':  200,
             })
             return data.get('results', [])
-        except SiigoError:
-            # Intentar accounting-entries
-            try:
-                data = self.cliente._get('/v1/accounting-entries', params={
-                    'date_start': fecha_ini,
-                    'date_end':   fecha_fin,
-                    'page_size':  200,
-                })
-                return data.get('results', [])
-            except SiigoError as e:
-                raise Exception(str(e))
+        except SiigoError as e:
+            raise Exception(str(e))
 
     def _extraer_pagos(self, fecha_ini: str, fecha_fin: str) -> list:
         try:
