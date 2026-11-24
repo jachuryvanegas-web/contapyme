@@ -268,8 +268,12 @@ class SiigoClient:
         """Verifica que las credenciales son correctas."""
         try:
             self.autenticar()
-            info = self._get('/v1/users/me')
-            return {'ok': True, 'usuario': info.get('username'), 'empresa': info.get('company')}
+            # Siigo no tiene /v1/users/me — si autenticar() no lanzó excepción, las credenciales son válidas
+            try:
+                info = self._get('/v1/users/me')
+            except SiigoError:
+                info = {}
+            return {'ok': True, 'usuario': self.username, 'empresa': info.get('company', 'Siigo')}
         except SiigoError as e:
             return {'ok': False, 'error': str(e)}
 
