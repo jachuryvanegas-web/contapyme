@@ -194,17 +194,19 @@ def guardar_config_siigo():
         return err(f'Credenciales Siigo inválidas: {prueba["error"]}')
 
     con = get_db()
-    con.execute('''
-        INSERT INTO configuracion_siigo (empresa_id, username, access_key, partner_id,
-                                         tipo_doc_id, cuenta_gasto)
-        VALUES (?,?,?,?,?,?)
-        ON CONFLICT(empresa_id) DO UPDATE SET
-            username=excluded.username, access_key=excluded.access_key,
-            partner_id=excluded.partner_id, tipo_doc_id=excluded.tipo_doc_id,
-            cuenta_gasto=excluded.cuenta_gasto, activo=1,
-            actualizado=datetime('now')
-    ''', (eid, d['username'], d['access_key'], d.get('partner_id', ''),
-          d.get('tipo_doc_id', 24), d.get('cuenta_gasto', '513595')))
+    existe = con.execute('SELECT id FROM configuracion_siigo WHERE empresa_id=?', (eid,)).fetchone()
+    if existe:
+        con.execute('''UPDATE configuracion_siigo SET
+            username=?, access_key=?, partner_id=?, tipo_doc_id=?, cuenta_gasto=?,
+            activo=1, actualizado=datetime('now') WHERE empresa_id=?''',
+            (d['username'], d['access_key'], d.get('partner_id', ''),
+             d.get('tipo_doc_id', 24), d.get('cuenta_gasto', '513595'), eid))
+    else:
+        con.execute('''INSERT INTO configuracion_siigo
+            (empresa_id, username, access_key, partner_id, tipo_doc_id, cuenta_gasto)
+            VALUES (?,?,?,?,?,?)''',
+            (eid, d['username'], d['access_key'], d.get('partner_id', ''),
+             d.get('tipo_doc_id', 24), d.get('cuenta_gasto', '513595')))
     con.commit()
     con.close()
     return ok({'mensaje': 'Configuración Siigo guardada', 'siigo_usuario': prueba.get('usuario')})
